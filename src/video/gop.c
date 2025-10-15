@@ -1,78 +1,89 @@
-// #include "gop.h"
-// #include "../kernel.h"
+#include "../EFI/efi.h"
+#include "../EFI/protocol/efi-gop.h"
 
-// #define DEFAULT_COLOR 0x0F
+#define DEFAULT_COLOR 0xFFFFFFFF
+#define SCREEN_WIDTH 80
+#define SCREEN_HEIGHT 25
 
-// static UINTN cursorX = 0;
-// static UINTN cursorY = 0;
-// static EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
+static EFI_GRAPHICS_OUTPUT_PROTOCOL *gGop;
+static UINTN cursorX = 0;
+static UINTN cursorY = 0;
 
-// // Функция для инициализации GOP
-// void GOP_Init() {
-//     cursorX = 0;
-//     cursorY = 0;
+static void GOP_DisableCursor() {
+    // GOP does not manage hardware cursors; this is a placeholder.
+}
 
-//     EFI_STATUS status;
-//     EFI_GUID gopGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
+EFI_STATUS GOP_Init(EFI_HANDLE ImageHandle) {
+    EFI_STATUS Status;
+    Status = gBS->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, (VOID**)&gGop);
+    if (EFI_ERROR(Status)) {
+        return Status;
+    }
 
-//     // Локализуем протокол GOP
-//     status = uefi_call_wrapper(BS->LocateProtocol, 3, &gopGuid, NULL, (void **)&gop);
-//     if (EFI_ERROR(status)) {
-//         //I should smth here, like RSOF call
-//     }
-// }
+    GOP_DisableCursor();
+    cursorX = 0;
+    cursorY = 0;
 
-// // Функция для очистки экрана
-// void GOP_Clear() {
-//     GOP_ClearColor(DEFAULT_COLOR);
-// }
+    return EFI_SUCCESS;
+}
 
-// // Функция для очистки с указанным цветом
-// void GOP_ClearColor(unsigned char color) {
-//     EFI_GRAPHICS_OUTPUT_BLT_PIXEL fillColor = {color, color, color, 0};
+void GOP_Clear() {
+    GOP_ClearColor(DEFAULT_COLOR);
+}
 
-//     // Заполняем экран текущим цветом
-//     uefi_call_wrapper(gop->Blt, 7, gop, &fillColor, EfiBltVideoFill, 0, 0,
-//                       0, 0, gop->Mode->Info->HorizontalResolution,
-//                       gop->Mode->Info->VerticalResolution);
+void GOP_ClearColor(UINT32 Color) {
+    UINTN Size = gGop->Mode->Info->HorizontalResolution * gGop->Mode->Info->VerticalResolution * sizeof(EFI_GRAPHICS_OUTPUT_BLT_PIXEL);
+    EFI_GRAPHICS_OUTPUT_BLT_PIXEL *BltBuffer = AllocatePool(Size);
     
-//     cursorX = 0;
-//     cursorY = 0;
-// }
+    for (UINTN i = 0; i < Size / sizeof(EFI_GRAPHICS_OUTPUT_BLT_PIXEL); i++) {
+        BltBuffer[i].Blue = (Color & 0xFF0000) >> 16;
+        BltBuffer[i].Green = (Color & 0x00FF00) >> 8;
+        BltBuffer[i].Red = (Color & 0x0000FF);
+        BltBuffer[i].Reserved = 0;
+    }
 
-// // Функция для перехода на новую строку
-// void GOP_NewLine() {
-//     cursorY++;
-//     if (cursorY >= gop->Mode->Info->VerticalResolution / 16) {  // 16 - высота символа
-//         cursorY = gop->Mode->Info->VerticalResolution / 16 - 1;
-//     }
-//     cursorX = 0;
-// }
+    gGop->Blt(gGop, BltBuffer, EfiBltVideoFill, 0, 0, 0, 0,
+              gGop->Mode->Info->HorizontalResolution, gGop->Mode->Info->VerticalResolution, 0);
+    
+    FreePool(BltBuffer);
+    cursorX = 0;
+    cursorY = 0;
+}
 
-// // Функция для печати строки с цветом
-// void GOP_PrintColor(const char* str, unsigned char color) {
-//     EFI_GRAPHICS_OUTPUT_BLT_PIXEL textColor = {color, color, color, 0};
+void GOP_NewLine() {
+    cursorY++;
+    if (cursorY >= SCREEN_HEIGHT) {
+        cursorY = SCREEN_HEIGHT - 1;
+    }
+    cursorX = 0;
+}
 
-//     while (*str) {
-//         if (*str == '\n') { 
-//             GOP_NewLine(); 
-//             str++; 
-//             continue; 
-//         }
+void GOP_PrintColor(const CHAR8* str, UINT32 Color) {
+    while (*str) {
+        if (*str == '\n') {
+            GOP_NewLine();
+            str++;
+            continue;
+        }
 
-//         // Печать символа (должно быть реализовано создание битмапа символа)
-//         // Код для рисования символа, основываясь на текущих координатах cursorX, cursorY.
-//         // Например, используйте uefi_call_wrapper для вызова графического вывода.
+        if (cursorX < SCREEN_WIDTH && cursorY < SCREEN_HEIGHT) {
+            EFI_GRAPHICS_OUTPUT_BLT_PIXEL pixel;
+            pixel.Blue = (Color & 0xFF0000) >> 16;
+            pixel.Green = (Color & 0x00FF00) >> 8;
+            pixel.Red = (Color & 0x0000FF);
+            pixel.Reserved = 0;
 
-//         cursorX++;
-//         if (cursorX >= gop->Mode->Info->HorizontalResolution / 8) {  // 8 - ширина символа
-//             GOP_NewLine();  // если переполнено, переносим строку
-//         }
-//         str++;
-//     }
-// }
+            gGop->Blt(gGop, &pixel, EfiBltVideoFill, 0, 0, cursorX, cursorY, 1, 1, 0);
+        }
 
-// // Функция для печати строки с умолчаниями
-// void GOP_Print(const char* str) {
-//     GOP_PrintColor(str, DEFAULT_COLOR);
-// }
+        cursorX++;
+        if (cursorX >= SCREEN_WIDTH) {
+            GOP_NewLine();
+        }
+        str++;
+    }
+}
+
+void GOP_Print(const CHAR8* str) {
+    GOP_PrintColor(str, DEFAULT_COLOR);
+}
