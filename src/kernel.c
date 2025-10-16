@@ -1,17 +1,4 @@
-#include "base_utils/shell.h"
-#include "video/vga.h"
-#include "debug.h"
 #include "kernel.h"
-#include "video.h"
-
-// Kernel placeholder output
-void kprint(const char* str) {
-    vprint(str);
-}
-
-void kclear() {
-    vclear();
-}
 
 #ifndef NULL
 #define NULL ((void*)0)
@@ -73,7 +60,6 @@ void parse_boot_params(const char* cmdline) {
     }
 }
 
-// Kernel output function
 
 // Global variables
 
@@ -81,34 +67,6 @@ const char* grub_cmdline_global;
 
 // Main kernel function
 
-void kmain(void) {
-    // Check GRUB command line validity
-    if (grub_cmdline_global != NULL) {
-        parse_boot_params(grub_cmdline_global);
-    } else {
-        kprint("[ERROR] Oops, something wrong happend to GRUB command line.\n");
-        bootcfg.video = 1;
-    }
-
-    // Initialize video
-    if (bootcfg.video) {
-        DPRINT("VGA started!");
-    } else {
-        RSOF("HEADLESS MODE NOT IMPLEMENTED YET...");
-    }
-
-    Video_Init();
-
-    kclear();
-    DPRINT("Kernel bootup.");
-    DPRINT("XMD Kernel!!!");
-
-    // Initialize subsystems
-    if (bootcfg.shell) {
-        DPRINT("Initing shell...");
-        InitShell();
-    }
-
-    DPRINT("Nothing more to do. Halting myself.");
-    for (;;) __asm__ __volatile__("hlt");
+void kmain() {
+    
 }
