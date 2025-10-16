@@ -5,7 +5,6 @@ So in fact you maybe want to see API.c and API.h and do whatever u wamntasfopk,a
 
 
 ## Video modes:
-- [?] Implent EFI usage of GOP(Graphics Output Protocol) 
 - [ ] Implent screen resolution change to the kernel
 
 ## Funcs:

@@ -36,7 +36,7 @@ $(OBJ_DIR)/boot.o: $(SRC_DIR)/boot.asm
 	$(ASM) -f elf32 $< -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	@mkdir -p $(OBJ_DIR)
+	@mkdir -p $(dir $@)
 	$(CC) -m32 -fno-stack-protector -fno-builtin -ffreestanding -O2 -c $< -o $@
 
 # Run QEMU with the created ISO

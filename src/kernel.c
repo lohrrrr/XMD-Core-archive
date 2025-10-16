@@ -4,6 +4,15 @@
 #include "kernel.h"
 #include "video.h"
 
+// Kernel placeholder output
+void kprint(const char* str) {
+    vprint(str);
+}
+
+void kclear() {
+    vclear();
+}
+
 #ifndef NULL
 #define NULL ((void*)0)
 #endif
