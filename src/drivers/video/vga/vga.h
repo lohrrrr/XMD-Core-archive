@@ -1,3 +1,7 @@
+// Vga "Driver" API
+// Version:0.6
+// Author:Lohrrrr
+
 #ifndef VGA_H
 #define VGA_H
 

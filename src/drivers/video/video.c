@@ -1,4 +1,8 @@
-#include "video/vga.h"
+// Unique Video Protocol
+// Version:0.4
+// Author:Lohrrrr
+
+#include "vga/vga.h"
 #include "video.h"
 
 void Video_Init(void) {

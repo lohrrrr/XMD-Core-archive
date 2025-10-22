@@ -1,5 +1,9 @@
+// Vga "Driver"
+// Version:0.6
+// Author:Lohrrrr
+
 #include "vga.h"
-#include "../kernel.h"
+#include "../../../api.h"
 
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25

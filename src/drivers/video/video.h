@@ -1,3 +1,7 @@
+// Unique Video Protocol API
+// Version:0.4
+// Author:Lohrrrr
+
 #ifndef VIDEO_H
 #define VIDEO_H
 
