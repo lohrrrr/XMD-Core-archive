@@ -2,3 +2,4 @@
 .vscode/launch.json
 compiled/boot/kernel
 XMD.iso
+/obj
