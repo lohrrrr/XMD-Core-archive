@@ -3,7 +3,7 @@ ENTRY(start)
 SECTIONS
 {
     . = 0x100000;
-    .text : {*(.text)}
+    .text : {*(.multiboot)}
     .data : {*(.data)}
     .bss : {*(.bss)}
 }
