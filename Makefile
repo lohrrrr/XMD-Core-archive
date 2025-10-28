@@ -1,48 +1,72 @@
-# Makefile for building XMD project
+# XMD OS Makefile
+# Compiles all in one
+# Can compile for now kernel, iso
 
-# Variables
-SRC_DIR = src
-OBJ_DIR = obj
-BUILD_DIR = compiled
-BOOT_DIR = $(BUILD_DIR)/boot
-ISO_NAME = ./XMD.iso
+# Compiler and tools
 CC = gcc
+AS = nasm
 LD = ld
-ASM = nasm
-RM = rm -rf
+ISO_TOOL = grub-mkrescue
 QEMU = qemu-system-i386
 
+# Flags
+CFLAGS = -I XMD-SRC -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra -Werror -O2 -m32
+ASFLAGS = -f elf32
+LDFLAGS = -T linker.ld -nostdlib -m elf_i386
+
+# Directories
+SRC_DIR = XMD-SRC
+BUILD_DIR = tmp
+ISO_DIR = iso
+XMD_DIR = XMD
+
+# Source files
+C_SOURCES = $(wildcard $(SRC_DIR)/kernel/*.c) \
+            $(wildcard $(SRC_DIR)/kernel/*/*.c) \
+            $(wildcard $(SRC_DIR)/drivers/*/*.c) \
+            $(wildcard $(SRC_DIR)/drivers/*/*/*.c)
+
+ASM_SOURCES = $(wildcard $(SRC_DIR)/kernel/*.asm)
+
 # Object files
-OBJ_FILES = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(shell find $(SRC_DIR) -name '*.c')) \
-            $(OBJ_DIR)/boot.o
-            
+C_OBJECTS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(C_SOURCES))
+ASM_OBJECTS = $(patsubst $(SRC_DIR)/%.asm, $(BUILD_DIR)/%.o, $(ASM_SOURCES))
+
+# All objects
+OBJECTS = $(C_OBJECTS) $(ASM_OBJECTS)
+
 # Targets
-.PHONY: all clean run
+.PHONY: all clean kernel iso run
 
-all: $(ISO_NAME) # Default target to build the ISO
+all: kernel iso
 
-$(ISO_NAME): $(BOOT_DIR)/kernel
-	@mkdir -p $(BOOT_DIR)
-	grub-mkrescue -o $@ $(BUILD_DIR)
+kernel: $(XMD_DIR)/sysroot32/xkrnl
 
-$(BOOT_DIR)/kernel: $(OBJ_DIR)/kernel.elf
-	@mkdir -p $(BOOT_DIR)
-	mv $< $@
+iso: $(BUILD_DIR)/xmd.iso
 
-$(OBJ_DIR)/kernel.elf: $(OBJ_FILES)
-	$(LD) -m elf_i386 -T linker.ld -o $@ $^
+run: $(BUILD_DIR)/xmd.iso
+	$(QEMU) -cdrom $<
 
-$(OBJ_DIR)/boot.o: $(SRC_DIR)/boot.asm
-	$(ASM) -f elf32 $< -o $@
-
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
-	$(CC) -m32 -fno-stack-protector -fno-builtin -ffreestanding -O2 -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Run QEMU with the created ISO
-run: $(ISO_NAME)
-	$(QEMU) -cdrom $(ISO_NAME) -boot d -m 512 -smp 2
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.asm
+	@mkdir -p $(dir $@)
+	$(AS) $(ASFLAGS) $< -o $@
 
-# Clean up temporary files
+$(BUILD_DIR)/kernel.elf: $(OBJECTS)
+	$(LD) $(LDFLAGS) $^ -o $@
+
+$(XMD_DIR)/sysroot32/xkrnl: $(BUILD_DIR)/kernel.elf
+	cp $< $@
+
+$(BUILD_DIR)/xmd.iso: $(XMD_DIR)/sysroot32/xkrnl
+	@mkdir -p $(ISO_DIR)
+	cp -r $(XMD_DIR)/* $(ISO_DIR)/
+	$(ISO_TOOL) -o $@ $(ISO_DIR)
+	rm -rf $(ISO_DIR)
+
 clean:
-	$(RM) $(OBJ_DIR) $(BOOT_DIR) $(BUILD_DIR) $(ISO_NAME)
+	rm -rf $(BUILD_DIR) $(ISO_DIR)
+	rm -rf tmp
