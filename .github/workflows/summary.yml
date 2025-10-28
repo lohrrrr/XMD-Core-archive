@@ -1,33 +1,37 @@
-name: Summarize new pull request reviews
+name: Summarize new code updates
 
 on:
-  pull_request_review:
-    types: [submitted]
+  push:
+    branches:
+      - main
 
 jobs:
   summary:
     runs-on: ubuntu-latest
     permissions:
-      models: read
       contents: read
+      models: read
+      issues: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Prepare summary content
+        id: prepare
+        run: echo "## New updates in the repository" > summary.md
 
       - name: Run AI inference
         id: inference
         uses: actions/ai-inference@v1
         with:
           prompt: |
-            Summarize the following GitHub pull request review in one paragraph:
-            Title: ${{ github.event.pull_request.title }}
-            Review body: ${{ github.event.review.body }}
+            Summarize the following code changes:
+            ${GITHUB_COMMIT_MESSAGE}
 
       - name: Comment with AI summary
         run: |
-          gh pr comment $PULL_REQUEST_NUMBER --body '${{ steps.inference.outputs.response }}'
+          gh issue comment $ISSUE_NUMBER --body '${{ steps.inference.outputs.response }}'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
-          RESPONSE: ${{ steps.inference.outputs.response }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}  # Убедитесь, что вы заменили это значение при необходимости
